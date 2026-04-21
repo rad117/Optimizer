@@ -1,0 +1,1015 @@
+<!DOCTYPE html>
+<html class="dark" lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Ethereal | Steepest Descent Lab</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Inter:wght@400;500;600&family=Google+Sans+Mono:wght@400;500&display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+  tailwind.config = {
+    darkMode: "class",
+    theme: {
+      extend: {
+        colors: {
+          "on-secondary-fixed": "#20005f",
+          "inverse-primary": "#adc6ff",
+          "secondary": "#632ce5",
+          "on-tertiary": "#ffffff",
+          "surface-dim": "#dadad5",
+          "tertiary-container": "#e90625",
+          "primary-fixed-dim": "#adc6ff",
+          "background": "#020617",
+          "on-surface": "#f1f1ec",
+          "on-error-container": "#93000a",
+          "on-secondary-fixed-variant": "#4f00d0",
+          "surface": "#0f172a",
+          "on-primary-fixed-variant": "#004494",
+          "surface-container-low": "#1e293b",
+          "error-container": "#93000a",
+          "tertiary-fixed": "#ffdad7",
+          "tertiary": "#ff4d6d",
+          "secondary-container": "#7c4dff",
+          "on-tertiary-container": "#fffbff",
+          "surface-container-high": "#334155",
+          "surface-container-lowest": "#020617",
+          "on-error": "#ffffff",
+          "surface-container": "#1e293b",
+          "primary-fixed": "#d8e2ff",
+          "tertiary-fixed-dim": "#ffb3ad",
+          "on-primary": "#ffffff",
+          "surface-bright": "#1e293b",
+          "on-surface-variant": "#94a3b8",
+          "on-primary-container": "#fefcff",
+          "surface-tint": "#005ac1",
+          "secondary-fixed": "#e8deff",
+          "surface-container-highest": "#475569",
+          "on-primary-fixed": "#001a41",
+          "on-secondary-container": "#fcf6ff",
+          "outline": "#475569",
+          "on-tertiary-fixed-variant": "#930012",
+          "error": "#ba1a1a",
+          "on-background": "#f8fafc",
+          "secondary-fixed-dim": "#cdbdff",
+          "on-tertiary-fixed": "#410004",
+          "inverse-on-surface": "#0f172a",
+          "surface-variant": "#1e293b",
+          "on-secondary": "#ffffff",
+          "inverse-surface": "#f8fafc",
+          "primary-container": "#2771df",
+          "primary": "#4285F4",
+          "outline-variant": "#334155"
+        },
+        borderRadius: {
+          DEFAULT: "1rem", lg: "2rem", xl: "3rem", full: "9999px"
+        },
+        fontFamily: {
+          headline: ["Plus Jakarta Sans"],
+          body: ["Inter"],
+          label: ["Inter"],
+          mono: ["Google Sans Mono", "monospace"]
+        }
+      }
+    }
+  }
+</script>
+<style>
+  .material-symbols-outlined { font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24; }
+  body { background-color: #020617; color: #f8fafc; font-family: 'Inter', sans-serif; overflow-x: hidden; }
+  .glass-card { background: rgba(15,23,42,0.6); backdrop-filter: blur(24px); border: 1px solid rgba(255,255,255,0.05); }
+  .glass-panel { backdrop-filter: blur(24px); -webkit-backdrop-filter: blur(24px); }
+  .transition-premium { transition: all 300ms cubic-bezier(0.2,0,0,1); }
+
+  .panel { display: none; }
+  .panel.active { display: block; animation: fadeUp .3s ease both; }
+  @keyframes fadeUp { from { opacity:0; transform:translateY(12px); } to { opacity:1; transform:translateY(0); } }
+
+  ::-webkit-scrollbar { width: 4px; height: 4px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: #334155; border-radius: 4px; }
+
+  input[type="number"]::-webkit-inner-spin-button,
+  input[type="number"]::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
+
+  .plot-tooltip {
+    position: absolute; background: rgba(15,23,42,0.95); color: #f8fafc;
+    padding: 6px 10px; border-radius: 8px; font-size: 11px;
+    font-family: 'Google Sans Mono', monospace; pointer-events: none;
+    white-space: nowrap; opacity: 0; transition: opacity .15s; z-index: 20;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.4); border: 1px solid rgba(255,255,255,0.08);
+  }
+
+  .ctable { width: 100%; border-collapse: separate; border-spacing: 0; }
+  .ctable th {
+    padding: 12px 16px; text-align: left; font-size: 11px;
+    text-transform: uppercase; letter-spacing: 0.05em;
+    color: #64748b; font-family: 'Plus Jakarta Sans', sans-serif; font-weight: 700;
+  }
+  .ctable td { padding: 14px 16px; font-size: 13px; vertical-align: middle; }
+  .ctable tbody tr { border-top: 1px solid rgba(255,255,255,0.04); }
+  .ctable tbody tr:hover { background: rgba(255,255,255,0.03); }
+
+  .sidebar-input {
+    width: 100%; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.07);
+    border-radius: 12px; padding: 8px 12px; font-size: 13px; color: #f1f1ec;
+    font-family: 'Google Sans Mono', monospace;
+    transition: all 300ms cubic-bezier(0.2,0,0,1);
+  }
+  .sidebar-input:focus { outline: none; background: rgba(66,133,244,0.1); border-color: rgba(66,133,244,0.4); box-shadow: 0 0 0 3px rgba(66,133,244,0.1); }
+
+  /* Sidebar hover-expand */
+  #sidebar { width: 72px; transition: width 500ms cubic-bezier(0.2,0,0,1); }
+  #sidebar:hover { width: 280px; }
+  #sidebar .sidebar-label { opacity: 0; transition: opacity 200ms ease; white-space: nowrap; overflow: hidden; }
+  #sidebar:hover .sidebar-label { opacity: 1; }
+
+  /* Config panel slide */
+  #configPanel { transition: all 400ms cubic-bezier(0.2,0,0,1); }
+</style>
+</head>
+<body class="min-h-screen">
+
+<!-- ══════════════ TOP NAV ══════════════ -->
+<nav class="fixed top-4 left-1/2 -translate-x-1/2 w-[calc(100%-2rem)] max-w-6xl rounded-full bg-zinc-950/70 backdrop-blur-xl shadow-[0_12px_40px_rgba(0,0,0,0.4)] flex justify-between items-center px-6 py-3 z-50">
+  <div class="flex items-center gap-6">
+    <span class="text-xl font-black bg-gradient-to-r from-[#4285F4] to-[#632ce5] bg-clip-text text-transparent font-headline">Ethereal</span>
+    <div class="hidden md:flex items-center gap-1">
+      <button class="tab-btn px-4 py-1.5 rounded-full text-sm font-semibold font-headline text-white bg-white/10" data-tab="viz">Explore</button>
+      <button class="tab-btn px-4 py-1.5 rounded-full text-sm font-semibold font-headline text-zinc-400 hover:text-white transition-colors" data-tab="convergence">Analytics</button>
+      <button class="tab-btn px-4 py-1.5 rounded-full text-sm font-semibold font-headline text-zinc-400 hover:text-white transition-colors" data-tab="compare">Benchmarks</button>
+    </div>
+  </div>
+  <div class="flex items-center gap-3">
+    <div class="hidden md:flex items-center gap-2 px-3 py-1 rounded-full bg-zinc-800/80 text-xs font-semibold" id="statusBadge">
+      <span class="w-2 h-2 rounded-full bg-zinc-500" id="statusDot"></span>
+      <span id="statusText">Ready</span>
+    </div>
+    <span class="material-symbols-outlined text-zinc-400 hover:text-white cursor-pointer transition-colors" data-icon="account_circle">account_circle</span>
+  </div>
+</nav>
+
+<!-- ══════════════ SIDE NAV ══════════════ -->
+<aside class="fixed left-4 top-4 bottom-4 overflow-hidden bg-zinc-950/60 backdrop-blur-2xl shadow-[0_20px_50px_rgba(0,0,0,0.5)] flex flex-col items-start py-8 gap-2 z-40 hidden md:flex rounded-[2rem]" id="sidebar">
+  <!-- Logo -->
+  <div class="flex items-center gap-3 px-4 mb-6 w-full">
+    <div class="w-10 h-10 min-w-[40px] bg-gradient-to-tr from-[#4285F4] to-[#632ce5] rounded-xl flex items-center justify-center">
+      <span class="material-symbols-outlined text-white text-lg" style="font-variation-settings: 'FILL' 1;" data-icon="query_stats">query_stats</span>
+    </div>
+    <span class="sidebar-label text-sm font-bold font-headline text-white">Steepest Descent</span>
+  </div>
+  <!-- Nav items -->
+  <div class="flex items-center gap-3 px-4 py-3 mx-2 bg-gradient-to-tr from-[#4285F4] to-[#632ce5] text-white rounded-2xl cursor-pointer w-[calc(100%-16px)]" onclick="switchTab('viz')">
+    <span class="material-symbols-outlined min-w-[24px]" style="font-variation-settings: 'FILL' 1;" data-icon="grid_view">grid_view</span>
+    <span class="sidebar-label text-sm font-headline font-semibold">Visualize</span>
+  </div>
+  <div class="flex items-center gap-3 px-4 py-3 mx-2 text-zinc-500 hover:text-zinc-200 hover:bg-zinc-800/50 rounded-2xl cursor-pointer transition-all w-[calc(100%-16px)]" onclick="switchTab('convergence')">
+    <span class="material-symbols-outlined min-w-[24px]" data-icon="insights">insights</span>
+    <span class="sidebar-label text-sm font-headline font-semibold">Analytics</span>
+  </div>
+  <div class="flex items-center gap-3 px-4 py-3 mx-2 text-zinc-500 hover:text-zinc-200 hover:bg-zinc-800/50 rounded-2xl cursor-pointer transition-all w-[calc(100%-16px)]" onclick="switchTab('compare')">
+    <span class="material-symbols-outlined min-w-[24px]" data-icon="compare_arrows">compare_arrows</span>
+    <span class="sidebar-label text-sm font-headline font-semibold">Benchmark</span>
+  </div>
+  <div class="mt-auto flex items-center gap-3 px-4 py-3 mx-2 text-zinc-500 hover:text-zinc-200 hover:bg-zinc-800/50 rounded-2xl cursor-pointer transition-all w-[calc(100%-16px)]" onclick="document.getElementById('configPanel').classList.toggle('translate-x-full'); document.getElementById('configPanel').classList.toggle('translate-x-0');">
+    <span class="material-symbols-outlined min-w-[24px]" data-icon="tune">tune</span>
+    <span class="sidebar-label text-sm font-headline font-semibold">Parameters</span>
+  </div>
+</aside>
+
+<!-- ══════════════ CONFIG DRAWER ══════════════ -->
+<div class="fixed right-0 top-0 bottom-0 w-80 z-50 transform translate-x-full transition-all duration-500 ease-[cubic-bezier(0.2,0,0,1)]" id="configPanel">
+  <div class="h-full glass-card border-l border-white/5 flex flex-col p-6 gap-6 overflow-y-auto">
+    <div class="flex items-center justify-between pt-20">
+      <h2 class="font-headline font-bold text-white text-lg">Configuration</h2>
+      <button class="w-8 h-8 rounded-full bg-white/5 hover:bg-white/10 flex items-center justify-center transition-colors"
+              onclick="document.getElementById('configPanel').classList.add('translate-x-full'); document.getElementById('configPanel').classList.remove('translate-x-0');">
+        <span class="material-symbols-outlined text-sm text-zinc-400">close</span>
+      </button>
+    </div>
+
+    <!-- Function Selection -->
+    <div class="space-y-3">
+      <label class="text-xs font-bold uppercase tracking-widest text-zinc-500 font-headline">Target Function</label>
+      <div class="flex flex-wrap gap-2" id="fnGrid"></div>
+      <div class="text-[11px] font-mono text-zinc-400 bg-white/5 p-2.5 rounded-xl mt-2 break-all leading-relaxed" id="fnFormula"></div>
+    </div>
+
+    <!-- Method Selection -->
+    <div class="space-y-3">
+      <label class="text-xs font-bold uppercase tracking-widest text-zinc-500 font-headline">Step Size Method</label>
+      <div class="space-y-1.5" id="methodList"></div>
+    </div>
+
+    <!-- Parameters -->
+    <div class="space-y-3">
+      <label class="text-xs font-bold uppercase tracking-widest text-zinc-500 font-headline">Parameters</label>
+      <div class="grid grid-cols-2 gap-3">
+        <div>
+          <span class="text-[10px] uppercase tracking-wider text-zinc-500 font-bold px-0.5 block mb-1">Start X</span>
+          <input class="sidebar-input" id="x0" step="0.1" type="number" value="-1.2"/>
+        </div>
+        <div>
+          <span class="text-[10px] uppercase tracking-wider text-zinc-500 font-bold px-0.5 block mb-1">Start Y</span>
+          <input class="sidebar-input" id="y0" step="0.1" type="number" value="1.0"/>
+        </div>
+        <div>
+          <span class="text-[10px] uppercase tracking-wider text-zinc-500 font-bold px-0.5 block mb-1">Max Iter</span>
+          <input class="sidebar-input" id="maxIter" step="500" type="number" value="5000"/>
+        </div>
+        <div>
+          <span class="text-[10px] uppercase tracking-wider text-zinc-500 font-bold px-0.5 block mb-1">Tolerance</span>
+          <input class="sidebar-input" id="tol" type="number" value="0.000001"/>
+        </div>
+      </div>
+    </div>
+
+    <!-- Actions -->
+    <div class="space-y-3 mt-auto">
+      <button class="w-full py-3.5 rounded-full bg-gradient-to-r from-[#4285F4] to-[#632ce5] text-white font-bold text-sm shadow-xl shadow-blue-900/30 flex items-center justify-center gap-2 hover:opacity-90 transition-premium active:scale-95" id="runBtn">
+        <span class="material-symbols-outlined text-sm" style="font-variation-settings: 'FILL' 1;" data-icon="play_arrow">play_arrow</span>
+        Execute Simulation
+      </button>
+      <button class="w-full py-3 rounded-full bg-white/5 border border-white/10 text-white font-bold text-sm flex items-center justify-center gap-2 hover:bg-white/10 transition-premium active:scale-95" id="cmpBtn">
+        <span class="material-symbols-outlined text-sm" data-icon="compare_arrows">compare_arrows</span>
+        Run Benchmark
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════ MAIN ══════════════ -->
+<main class="md:ml-[100px] pt-24 px-4 md:px-8 pb-24 max-w-7xl mx-auto">
+
+  <!-- Hero heading -->
+  <div class="mb-10 mt-4">
+    <h1 class="text-5xl md:text-6xl font-black font-headline leading-tight">
+      <span class="text-white">Deep</span>
+      <span class="bg-gradient-to-r from-[#4285F4] to-[#632ce5] bg-clip-text text-transparent"> Optimization</span>
+    </h1>
+    <p class="text-zinc-400 mt-3 max-w-xl">Steepest descent with 6 step-size methods — Napitupulu et al. (2018). Configure a function, pick a method, and execute.</p>
+  </div>
+
+  <!-- Quick-launch bar -->
+  <div class="glass-card rounded-2xl p-4 mb-8 flex flex-wrap gap-3 items-center">
+    <div class="flex-1 flex flex-wrap gap-2" id="quickFnGrid"></div>
+    <div class="flex items-center gap-2">
+      <div class="flex items-center gap-2 px-3 py-1 rounded-full bg-white/5 text-xs font-mono" id="quickMethodBadge">
+        <span class="w-2 h-2 rounded-full" id="quickMethodDot" style="background:#632ce5"></span>
+        <span id="quickMethodName">Armijo</span>
+      </div>
+      <button class="px-5 py-2 rounded-full bg-gradient-to-r from-[#4285F4] to-[#632ce5] text-white text-sm font-bold hover:opacity-90 transition-premium active:scale-95 flex items-center gap-1.5" id="quickRunBtn">
+        <span class="material-symbols-outlined text-sm" style="font-variation-settings: 'FILL' 1;">play_arrow</span>
+        Run
+      </button>
+      <button class="px-4 py-2 rounded-full bg-white/5 border border-white/10 text-white text-sm font-bold hover:bg-white/10 transition-premium active:scale-95" onclick="document.getElementById('configPanel').classList.remove('translate-x-full'); document.getElementById('configPanel').classList.add('translate-x-0');">
+        <span class="material-symbols-outlined text-sm">tune</span>
+      </button>
+    </div>
+  </div>
+
+  <!-- ─── PANEL: Visualize ─── -->
+  <section class="panel active" id="panelViz">
+    <div class="grid grid-cols-1 md:grid-cols-4 lg:grid-cols-6 gap-6">
+
+      <!-- Main Contour Plot Card -->
+      <div class="md:col-span-4 lg:col-span-4 glass-card rounded-lg p-6 relative overflow-hidden">
+        <div class="flex justify-between items-start mb-5">
+          <div>
+            <h3 class="font-headline font-bold text-2xl text-white">Loss Landscape</h3>
+            <p class="text-zinc-400 text-sm mt-0.5">Optimization Path Analysis</p>
+          </div>
+          <div class="flex gap-2 items-center">
+            <span class="px-3 py-1 bg-primary/20 text-primary rounded-full text-xs font-bold border border-primary/30 font-mono" id="mBadge">—</span>
+            <span class="px-3 py-1 bg-white/5 text-zinc-400 rounded-full text-xs" id="activeFnLabel">Rosenbrock</span>
+          </div>
+        </div>
+
+        <!-- Canvas -->
+        <div class="w-full aspect-[16/9] rounded-2xl bg-zinc-900/50 overflow-hidden border border-white/5 relative" id="plotWrap">
+          <canvas class="w-full h-full cursor-crosshair block" id="plotCanvas"></canvas>
+          <!-- Empty state -->
+          <div class="absolute inset-0 flex flex-col items-center justify-center bg-zinc-950/80 backdrop-blur-sm z-10" id="plotEmpty">
+            <div class="w-16 h-16 rounded-full bg-white/5 flex items-center justify-center mb-4">
+              <span class="material-symbols-outlined text-3xl text-zinc-400">play_circle</span>
+            </div>
+            <p class="font-headline font-bold text-lg text-white">Ready to simulate</p>
+            <p class="text-sm text-zinc-500 mt-1">Configure parameters and execute</p>
+          </div>
+          <!-- Legend -->
+          <div class="absolute top-4 right-4 p-4 glass-card rounded-2xl hidden md:block" id="plotLegend">
+            <h4 class="text-[10px] font-bold uppercase tracking-widest text-zinc-400 mb-3 font-headline">Legend</h4>
+            <div class="space-y-2">
+              <div class="flex items-center gap-2.5">
+                <div class="w-3 h-3 rounded-full bg-[#fbbc04] border-2 border-white/30"></div>
+                <span class="text-[10px] font-bold text-zinc-400">Global Minima</span>
+              </div>
+              <div class="flex items-center gap-2.5">
+                <div class="w-3 h-3 rounded-full bg-white border-2 border-zinc-600"></div>
+                <span class="text-[10px] font-bold text-zinc-400">Start Point</span>
+              </div>
+              <div class="flex items-center gap-2.5" id="legendPathItem" style="display:none">
+                <div class="w-5 h-1.5 rounded-full" id="legendPathSwatch"></div>
+                <span class="text-[10px] font-bold text-zinc-400" id="legendPathLabel">Path</span>
+              </div>
+            </div>
+          </div>
+          <!-- Player -->
+          <div class="absolute bottom-4 left-1/2 -translate-x-1/2 flex items-center gap-3 px-5 py-2.5 glass-card rounded-full border-white/10 shadow-2xl hidden" id="plotControls">
+            <button class="p-1.5 hover:bg-white/10 rounded-full transition-colors" id="animReset">
+              <span class="material-symbols-outlined text-sm text-white">skip_previous</span>
+            </button>
+            <button class="p-2.5 bg-white text-zinc-900 rounded-full hover:scale-105 active:scale-95 transition-all" id="animPlay">
+              <span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1;">play_arrow</span>
+            </button>
+            <div class="flex flex-col ml-1 min-w-[70px]">
+              <span class="text-[9px] text-zinc-400 font-bold uppercase tracking-wider">Step</span>
+              <span class="text-sm font-bold font-mono text-white" id="animStepLabel">0 / 0</span>
+            </div>
+          </div>
+          <div class="plot-tooltip" id="plotTooltip"></div>
+        </div>
+
+        <!-- Stats row -->
+        <div class="grid grid-cols-3 mt-5 gap-3">
+          <div class="p-4 bg-white/5 rounded-2xl">
+            <p class="text-[10px] text-zinc-500 mb-1 uppercase tracking-wider font-headline font-bold">‖∇f(x*)‖</p>
+            <p class="text-xl font-bold text-white font-mono" id="sGrad">—</p>
+          </div>
+          <div class="p-4 bg-white/5 rounded-2xl">
+            <p class="text-[10px] text-zinc-500 mb-1 uppercase tracking-wider font-headline font-bold">Iterations</p>
+            <p class="text-xl font-bold text-white font-mono" id="sIter">—</p>
+          </div>
+          <div class="p-4 bg-white/5 rounded-2xl">
+            <p class="text-[10px] text-zinc-500 mb-1 uppercase tracking-wider font-headline font-bold">f(x*)</p>
+            <p class="text-xl font-bold font-mono" id="sFval">—</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- Right sidebar cards -->
+      <div class="md:col-span-2 lg:col-span-2 space-y-5">
+
+        <!-- Status card -->
+        <div class="glass-card rounded-lg p-5 flex flex-col justify-between" style="min-height:160px">
+          <div class="flex items-center gap-3 mb-3">
+            <span class="material-symbols-outlined text-secondary text-3xl" data-icon="auto_awesome">auto_awesome</span>
+            <div>
+              <h3 class="font-headline font-bold text-lg text-white">Run Status</h3>
+              <p class="text-zinc-500 text-xs mt-0.5">Convergence analysis</p>
+            </div>
+          </div>
+          <div class="mt-2">
+            <div class="flex justify-between items-end mb-2">
+              <h3 class="text-2xl font-black text-white font-headline" id="sStatus">—</h3>
+              <span class="material-symbols-outlined text-lg" id="convIcon" style="color:#64748b">pending</span>
+            </div>
+            <p class="text-[11px] text-zinc-500 font-mono" id="sTime"></p>
+          </div>
+        </div>
+
+        <!-- Method selector card (mini) -->
+        <div class="glass-card rounded-lg p-5">
+          <h4 class="text-xs font-bold uppercase tracking-widest text-zinc-500 font-headline mb-3">Active Method</h4>
+          <div class="space-y-1.5" id="miniMethodList"></div>
+        </div>
+
+        <!-- Gradient Network card (visual accent) -->
+        <div class="bg-gradient-to-br from-[#4285F4] to-[#632ce5] rounded-lg p-5 text-white relative overflow-hidden">
+          <div class="absolute top-3 right-3 opacity-15">
+            <span class="material-symbols-outlined text-7xl" data-icon="hub">hub</span>
+          </div>
+          <p class="text-[10px] font-bold uppercase tracking-widest opacity-70 mb-1">Method Reference</p>
+          <h3 class="text-xl font-black leading-tight mb-3" id="methodFullName">Armijo Line Search</h3>
+          <p class="text-xs opacity-70 leading-relaxed" id="methodDesc">Inexact line search: find largest α satisfying the sufficient decrease condition.</p>
+        </div>
+
+      </div>
+    </div>
+  </section>
+
+  <!-- ─── PANEL: Analytics ─── -->
+  <section class="panel" id="panelConv">
+    <h2 class="text-3xl font-black font-headline mb-8 flex items-center gap-3">
+      <span class="w-2 h-8 bg-secondary rounded-full"></span>
+      Convergence Analytics
+    </h2>
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+      <div class="glass-card rounded-lg p-6">
+        <h4 class="text-sm font-bold font-headline uppercase tracking-tight text-white mb-1">Objective Decay</h4>
+        <p class="text-[10px] text-zinc-500 mb-5">f(x_k) over iterations (log scale)</p>
+        <div class="w-full aspect-video relative"><canvas id="chartFval"></canvas></div>
+      </div>
+      <div class="glass-card rounded-lg p-6">
+        <h4 class="text-sm font-bold font-headline uppercase tracking-tight text-white mb-1">Gradient Magnitude</h4>
+        <p class="text-[10px] text-zinc-500 mb-5">‖∇f‖ over iterations (log)</p>
+        <div class="w-full aspect-video relative"><canvas id="chartGrad"></canvas></div>
+      </div>
+      <div class="glass-card rounded-lg p-6">
+        <h4 class="text-sm font-bold font-headline uppercase tracking-tight text-white mb-1">Step Size α_k</h4>
+        <p class="text-[10px] text-zinc-500 mb-5">Alpha variation per iteration</p>
+        <div class="w-full aspect-video relative"><canvas id="chartAlpha"></canvas></div>
+      </div>
+      <div class="glass-card rounded-lg p-6">
+        <h4 class="text-sm font-bold font-headline uppercase tracking-tight text-white mb-1">Path Trajectory</h4>
+        <p class="text-[10px] text-zinc-500 mb-5">x, y coordinate evolution</p>
+        <div class="w-full aspect-video relative"><canvas id="chartXY"></canvas></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ─── PANEL: Benchmark ─── -->
+  <section class="panel" id="panelCmp">
+    <h2 class="text-3xl font-black font-headline mb-8 flex items-center gap-3">
+      <span class="w-2 h-8 bg-primary rounded-full"></span>
+      Comparison Benchmark
+    </h2>
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-5 mb-8" id="cmpCardsWrap">
+      <div class="col-span-full py-14 text-center glass-card rounded-lg">
+        <p class="text-zinc-500 font-medium">Run a benchmark to compare all methods.</p>
+      </div>
+    </div>
+    <div class="glass-card rounded-lg p-6 mb-8 hidden" id="cmpMasterChart">
+      <h4 class="text-sm font-bold font-headline uppercase tracking-tight text-white mb-5">Comparative Convergence Trace</h4>
+      <div class="w-full aspect-[21/9] relative"><canvas id="chartCmp"></canvas></div>
+    </div>
+    <div class="glass-card rounded-lg overflow-hidden hidden" id="cmpTableWrap">
+      <div class="p-5 border-b border-white/5">
+        <h4 class="text-sm font-bold font-headline uppercase tracking-tight text-white">Detailed Metrics</h4>
+      </div>
+      <div class="overflow-x-auto">
+        <table class="ctable" id="cmpTable">
+          <thead>
+            <tr>
+              <th>Method</th><th>Status</th><th>Iterations</th><th>f(x*)</th><th>‖∇f‖ final</th><th>Time (ms)</th>
+            </tr>
+          </thead>
+          <tbody id="cmpTableBody"></tbody>
+        </table>
+      </div>
+    </div>
+  </section>
+
+</main>
+
+<!-- Mobile bottom nav -->
+<nav class="md:hidden fixed bottom-0 left-0 right-0 glass-card border-t border-white/5 py-3 px-8 flex justify-between items-center z-50">
+  <button onclick="switchTab('viz')"><span class="material-symbols-outlined text-primary" style="font-variation-settings: 'FILL' 1;">grid_view</span></button>
+  <button onclick="switchTab('convergence')"><span class="material-symbols-outlined text-zinc-500">insights</span></button>
+  <div class="w-12 h-12 bg-gradient-to-tr from-primary to-secondary rounded-full flex items-center justify-center -mt-8 shadow-lg cursor-pointer"
+       onclick="document.getElementById('configPanel').classList.remove('translate-x-full'); document.getElementById('configPanel').classList.add('translate-x-0');">
+    <span class="material-symbols-outlined text-white" data-icon="tune">tune</span>
+  </div>
+  <button onclick="switchTab('compare')"><span class="material-symbols-outlined text-zinc-500">compare_arrows</span></button>
+  <button><span class="material-symbols-outlined text-zinc-500">account_circle</span></button>
+</nav>
+
+<script>
+/* ════════════════════════════════════════
+   CORE OPTIMIZATION DATA
+   ════════════════════════════════════════ */
+const FN = {
+  rosenbrock: {
+    name: 'Rosenbrock', short: 'Rosen.',
+    formula: 'f(x,y) = (1−x)² + 100(y−x²)²',
+    f:   (x,y) => (1-x)**2 + 100*(y-x**2)**2,
+    gx:  (x,y) => -2*(1-x) - 400*x*(y-x**2),
+    gy:  (x,y) => 200*(y-x**2),
+    Hxx: (x,y) => 2 - 400*(y-x**2) + 800*x**2,
+    Hxy: (x,y) => -400*x,
+    Hyy: ()    => 200,
+    x0: [-1.2, 1.0], xlim: [-2, 2], ylim: [-1, 3], opt: [1, 1], fOpt: 0
+  },
+  beale: {
+    name: 'Beale', short: 'Beale',
+    formula: 'f(x,y) = (1.5−x+xy)² + (2.25−x+xy²)² + (2.625−x+xy³)²',
+    f:   (x,y) => (1.5-x+x*y)**2 + (2.25-x+x*y**2)**2 + (2.625-x+x*y**3)**2,
+    gx:  (x,y) => { const a=1.5-x+x*y, b=2.25-x+x*y**2, c=2.625-x+x*y**3; return 2*a*(-1+y)+2*b*(-1+y**2)+2*c*(-1+y**3); },
+    gy:  (x,y) => { const a=1.5-x+x*y, b=2.25-x+x*y**2, c=2.625-x+x*y**3; return 2*a*x+2*b*(2*x*y)+2*c*(3*x*y**2); },
+    Hxx: (x,y) => numH(FN.beale.f,x,y,0,0), Hxy: (x,y) => numH(FN.beale.f,x,y,0,1), Hyy: (x,y) => numH(FN.beale.f,x,y,1,1),
+    x0: [1.0, 0.0], xlim: [-4.5, 4.5], ylim: [-4.5, 4.5], opt: [3, 0.5], fOpt: 0
+  },
+  booth: {
+    name: 'Booth', short: 'Booth',
+    formula: 'f(x,y) = (x + 2y − 7)² + (2x + y − 5)²',
+    f:   (x,y) => (x+2*y-7)**2 + (2*x+y-5)**2,
+    gx:  (x,y) => 2*(x+2*y-7) + 4*(2*x+y-5),
+    gy:  (x,y) => 4*(x+2*y-7) + 2*(2*x+y-5),
+    Hxx: () => 10, Hxy: () => 8, Hyy: () => 10,
+    x0: [-4.0, 4.0], xlim: [-10, 10], ylim: [-10, 10], opt: [1, 3], fOpt: 0
+  },
+  matyas: {
+    name: 'Matyas', short: 'Matyas',
+    formula: 'f(x,y) = 0.26(x² + y²) − 0.48xy',
+    f:   (x,y) => 0.26*(x**2+y**2) - 0.48*x*y,
+    gx:  (x,y) => 0.52*x - 0.48*y,
+    gy:  (x,y) => 0.52*y - 0.48*x,
+    Hxx: () => 0.52, Hxy: () => -0.48, Hyy: () => 0.52,
+    x0: [2.0, 2.0], xlim: [-3, 3], ylim: [-3, 3], opt: [0, 0], fOpt: 0
+  },
+  rastrigin: {
+    name: 'Rastrigin', short: 'Rastrig.',
+    formula: 'f(x,y) = x² + y² − cos(18x) − cos(18y)',
+    f:   (x,y) => x**2 + y**2 - Math.cos(18*x) - Math.cos(18*y),
+    gx:  (x,y) => 2*x + 18*Math.sin(18*x),
+    gy:  (x,y) => 2*y + 18*Math.sin(18*y),
+    Hxx: (x,y) => 2 + 324*Math.cos(18*x), Hxy: () => 0, Hyy: (x,y) => 2 + 324*Math.cos(18*y),
+    x0: [-1.0, 1.0], xlim: [-2, 2], ylim: [-2, 2], opt: [0, 0], fOpt: -2
+  }
+};
+
+function numH(f, x, y, i, j) {
+  const eps = 1e-5, d = [[0,0],[0,0]]; d[i][0]+=eps; d[j][1]+=eps;
+  return (f(x+d[0][0]+d[0][1],y+d[1][0]+d[1][1]) - f(x+d[0][0]-d[0][1],y+d[1][0]-d[1][1])
+         -f(x-d[0][0]+d[0][1],y-d[1][0]+d[1][1]) + f(x-d[0][0]-d[0][1],y-d[1][0]-d[1][1])) / (4*eps**2);
+}
+
+const METHODS = {
+  C:   { name: 'Cauchy (Exact)',       short: 'Cauchy',  color: '#4285F4', desc: 'Exact line search via quadratic formula: α = (gᵀg)/(gᵀHg).' },
+  A:   { name: 'Armijo',               short: 'Armijo',  color: '#632ce5', desc: 'Inexact search: find α ∈ {s,sβ,...} satisfying sufficient decrease.' },
+  B:   { name: 'Backtracking',         short: 'Back.',   color: '#00bfa5', desc: 'Backtracking from α=1 until Armijo condition holds.' },
+  BB1: { name: 'Barzilai-Borwein 1',   short: 'BB1',     color: '#ff6b35', desc: 'Spectral step: α = (sᵀy)/(yᵀy), uses secant curvature.' },
+  BB2: { name: 'Barzilai-Borwein 2',   short: 'BB2',     color: '#ffb300', desc: 'Alternate BB step: α = (sᵀs)/(sᵀy), often faster.' },
+  EL:  { name: 'Elimination',          short: 'EL',      color: '#e91e63', desc: 'Quadratic fit estimation without Hessian via function values.' }
+};
+
+/* ════════════════════════════════════════
+   STEP SIZE METHODS
+   ════════════════════════════════════════ */
+function goldenSection(f, x, y, dx, dy, lo=0, hi=2) {
+  const phi = (Math.sqrt(5)-1)/2;
+  let a=lo, b=hi, c=b-phi*(b-a), e=a+phi*(b-a);
+  let fc=f(x+c*dx,y+c*dy), fe=f(x+e*dx,y+e*dy);
+  for (let i=0; i<80; i++) {
+    if (Math.abs(b-a)<1e-9) break;
+    if (fc<fe) { b=e; e=c; fe=fc; c=b-phi*(b-a); fc=f(x+c*dx,y+c*dy); }
+    else       { a=c; c=e; fc=fe; e=a+phi*(b-a); fe=f(x+e*dx,y+e*dy); }
+  }
+  return (a+b)/2;
+}
+function stepCauchy(fn, x, y, gx, gy) {
+  const Hxx=fn.Hxx(x,y), Hxy=fn.Hxy(x,y), Hyy=fn.Hyy(x,y);
+  const denom = gx*(Hxx*gx+Hxy*gy) + gy*(Hxy*gx+Hyy*gy);
+  return denom < 1e-15 ? goldenSection(fn.f, x, y, -gx, -gy) : (gx*gx + gy*gy) / denom;
+}
+function stepArmijo(fn, x, y, gx, gy, s=1, beta=0.75, sigma=0.38) {
+  const slope = -(gx*gx+gy*gy); if (slope>=0) return 1e-4;
+  let alpha=s, fx=fn.f(x,y);
+  for (let i=0; i<100; i++) { if (fn.f(x-alpha*gx,y-alpha*gy)<=fx+sigma*alpha*slope) return alpha; alpha*=beta; }
+  return alpha;
+}
+function stepBacktrack(fn, x, y, gx, gy, beta=0.75, sigma=1e-4) {
+  const slope = -(gx*gx+gy*gy); if (slope>=0) return 1e-4;
+  let alpha=1.0, fx=fn.f(x,y);
+  for (let i=0; i<200; i++) { if (fn.f(x-alpha*gx,y-alpha*gy)<=fx+sigma*alpha*slope) return alpha; alpha*=beta; }
+  return alpha;
+}
+function stepBB1(sx, sy, yx, yy) {
+  const yTy=yx*yx+yy*yy; if (yTy<1e-30) return 0.01;
+  return Math.max(1e-10, Math.min((sx*yx+sy*yy)/yTy, 2));
+}
+function stepBB2(sx, sy, yx, yy) {
+  const sTy=sx*yx+sy*yy; if (Math.abs(sTy)<1e-30) return 0.01;
+  return Math.max(1e-10, Math.min((sx*sx+sy*sy)/sTy, 2));
+}
+function stepEL(fn, x, y, gx, gy, alphaPrev) {
+  const gg=gx*gx+gy*gy, fx=fn.f(x,y), ft=fn.f(x-alphaPrev*gx,y-alphaPrev*gy);
+  const denom=2*(ft-fx+alphaPrev*gg);
+  if (Math.abs(denom)<1e-30||denom<=0) return stepBacktrack(fn,x,y,gx,gy);
+  return Math.max(1e-10, Math.min((gg*alphaPrev**2)/denom, 2));
+}
+
+/* ════════════════════════════════════════
+   OPTIMIZER
+   ════════════════════════════════════════ */
+function runOptimize(fnKey, method, x0, y0, maxIter=5000, tol=1e-6) {
+  const fn = FN[fnKey];
+  let x=x0, y=y0, xp=null, yp=null, gxp=null, gyp=null;
+  let alphaPrev = (method==='BB1'||method==='BB2') ? 0.01 : 0.1;
+  const path=[{x,y}], fvals=[fn.f(x,y)], gradNorms=[], alphas=[];
+  const t0 = performance.now();
+
+  for (let k=0; k<maxIter; k++) {
+    const gx=fn.gx(x,y), gy=fn.gy(x,y);
+    const gnorm = Math.sqrt(gx*gx+gy*gy);
+    gradNorms.push(gnorm);
+    if (gnorm<tol || !isFinite(gnorm)) break;
+
+    let alpha = 0.01;
+    if      (method==='C')   alpha = stepCauchy(fn,x,y,gx,gy);
+    else if (method==='A')   alpha = stepArmijo(fn,x,y,gx,gy);
+    else if (method==='B')   alpha = stepBacktrack(fn,x,y,gx,gy);
+    else if (method==='BB1') alpha = xp!==null ? stepBB1(x-xp,y-yp,gx-gxp,gy-gyp) : 0.01;
+    else if (method==='BB2') alpha = xp!==null ? stepBB2(x-xp,y-yp,gx-gxp,gy-gyp) : 0.01;
+    else if (method==='EL')  alpha = stepEL(fn,x,y,gx,gy,alphaPrev);
+
+    alpha = Math.max(1e-12, Math.min(alpha, 10));
+    alphas.push(alpha);
+    xp=x; yp=y; gxp=gx; gyp=gy;
+    x -= alpha*gx; y -= alpha*gy; alphaPrev = alpha;
+    if (!isFinite(x)||!isFinite(y)) { x=xp; y=yp; break; }
+    path.push({x,y}); fvals.push(fn.f(x,y));
+    if (alpha*gnorm<tol) break;
+  }
+
+  const gxF=fn.gx(x,y), gyF=fn.gy(x,y);
+  const gnormF = Math.sqrt(gxF*gxF+gyF*gyF);
+  gradNorms.push(gnormF);
+  return { x, y, fx:fn.f(x,y), path, fvals, gradNorms, alphas, iters:alphas.length, time:performance.now()-t0, converged:gnormF<tol*100, gnormFinal:gnormF };
+}
+
+/* ════════════════════════════════════════
+   VISUALIZATION
+   ════════════════════════════════════════ */
+const CONTOUR_CACHE = {};
+function getContourData(fnKey) {
+  if (CONTOUR_CACHE[fnKey]) return CONTOUR_CACHE[fnKey];
+  const fn=FN[fnKey], RES=80, [x1,x2]=fn.xlim, [y1,y2]=fn.ylim;
+  const xs=Array.from({length:RES},(_,i)=>x1+(x2-x1)*i/(RES-1));
+  const ys=Array.from({length:RES},(_,j)=>y1+(y2-y1)*j/(RES-1));
+  const Z=ys.map(yv=>xs.map(xv=>fn.f(xv,yv)));
+  const flat=Z.flat().filter(isFinite).sort((a,b)=>a-b);
+  const lo=flat[Math.floor(flat.length*0.02)], hi=flat[Math.floor(flat.length*0.97)];
+  return CONTOUR_CACHE[fnKey] = {xs,ys,Z,lo,hi,RES,x1,x2,y1,y2};
+}
+
+function matColor(t) {
+  const stops=[[10,15,40],[26,28,75],[66,44,200],[0,88,189],[100,181,246],[220,240,255]];
+  const i=Math.min(stops.length-2,Math.floor(t*(stops.length-1)));
+  const f=t*(stops.length-1)-i, c0=stops[i], c1=stops[i+1];
+  return `rgb(${Math.round(c0[0]+(c1[0]-c0[0])*f)},${Math.round(c0[1]+(c1[1]-c0[1])*f)},${Math.round(c0[2]+(c1[2]-c0[2])*f)})`;
+}
+
+function drawStar(ctx, cx, cy, r1, r2, n, fill) {
+  ctx.save(); ctx.beginPath(); ctx.fillStyle=fill;
+  for (let i=0; i<2*n; i++) {
+    const a=i*Math.PI/n-Math.PI/2, r=i%2===0?r2:r1;
+    const px=cx+r*Math.cos(a), py=cy+r*Math.sin(a);
+    i===0?ctx.moveTo(px,py):ctx.lineTo(px,py);
+  }
+  ctx.closePath(); ctx.fill(); ctx.lineWidth=2; ctx.strokeStyle='rgba(255,255,255,0.8)'; ctx.stroke(); ctx.restore();
+}
+
+let animHandle=null, animIdx=0, animPlaying=false;
+
+function cancelAnimation() {
+  if (animHandle) cancelAnimationFrame(animHandle);
+  animHandle=null; animPlaying=false;
+  document.getElementById('animPlay').innerHTML='<span class="material-symbols-outlined" style="font-variation-settings: \'FILL\' 1;">play_arrow</span>';
+}
+
+function drawPlot(path, method) {
+  document.getElementById('plotEmpty').style.display='none';
+  document.getElementById('plotControls').classList.remove('hidden');
+
+  const canvas=document.getElementById('plotCanvas'), wrap=document.getElementById('plotWrap');
+  const W=wrap.clientWidth, H=wrap.clientHeight;
+  canvas.width=W*devicePixelRatio; canvas.height=H*devicePixelRatio;
+  const ctx=canvas.getContext('2d'); ctx.scale(devicePixelRatio,devicePixelRatio);
+
+  const cd=getContourData(curFn);
+  setupAnim(path, method, ctx, W, H, cd);
+
+  document.getElementById('legendPathItem').style.display='flex';
+  document.getElementById('legendPathSwatch').style.background=METHODS[method].color;
+  document.getElementById('legendPathLabel').textContent=METHODS[method].name;
+}
+
+function setupAnim(path, method, ctx, W, H, cd) {
+  cancelAnimation();
+  animIdx=path.length-1;
+
+  function drawFrame(upTo) {
+    const {Z,lo,hi,RES,x1,x2,y1,y2}=cd;
+    const pw=W/RES, ph=H/RES;
+    ctx.clearRect(0,0,W,H);
+    for (let j=0; j<RES; j++) for (let i=0; i<RES; i++) {
+      ctx.fillStyle=matColor(Math.max(0,Math.min(1,(Z[j][i]-lo)/(hi-lo))));
+      ctx.fillRect(i*pw,j*ph,pw+1,ph+1);
+    }
+    function toCanvas(x,y) { return [(x-x1)/(x2-x1)*W, (1-(y-y1)/(y2-y1))*H]; }
+    const sub=path.slice(0,upTo+1), color=METHODS[method]?.color||'#fff';
+    if (sub.length>1) {
+      // Glow
+      ctx.strokeStyle=color+'44'; ctx.lineWidth=8; ctx.lineCap='round'; ctx.lineJoin='round';
+      ctx.beginPath(); const [s0g,t0g]=toCanvas(sub[0].x,sub[0].y); ctx.moveTo(s0g,t0g);
+      sub.forEach(pt=>{ const [cx,cy]=toCanvas(pt.x,pt.y); ctx.lineTo(cx,cy); }); ctx.stroke();
+      // Main line
+      ctx.strokeStyle=color; ctx.lineWidth=2.5;
+      ctx.beginPath(); const [s0,t0]=toCanvas(sub[0].x,sub[0].y); ctx.moveTo(s0,t0);
+      sub.forEach(pt=>{ const [cx,cy]=toCanvas(pt.x,pt.y); ctx.lineTo(cx,cy); }); ctx.stroke();
+    }
+    if (sub.length>0) {
+      const ep=sub[sub.length-1], [ex,ey]=toCanvas(ep.x,ep.y);
+      ctx.fillStyle=color; ctx.strokeStyle='rgba(255,255,255,0.9)'; ctx.lineWidth=2;
+      ctx.beginPath(); ctx.arc(ex,ey,6,0,Math.PI*2); ctx.fill(); ctx.stroke();
+    }
+    const [s0,t0]=toCanvas(path[0].x,path[0].y);
+    ctx.fillStyle='rgba(255,255,255,0.9)'; ctx.strokeStyle='rgba(100,116,139,0.8)'; ctx.lineWidth=2;
+    ctx.beginPath(); ctx.arc(s0,t0,5,0,Math.PI*2); ctx.fill(); ctx.stroke();
+    const fn3=FN[curFn], [ox,oy]=toCanvas(fn3.opt[0],fn3.opt[1]);
+    drawStar(ctx,ox,oy,5,11,5,'#fbbc04');
+    document.getElementById('animStepLabel').textContent=`${upTo} / ${path.length-1}`;
+  }
+
+  drawFrame(path.length-1);
+
+  const playBtn=document.getElementById('animPlay');
+  playBtn.onclick=()=>{
+    animPlaying=!animPlaying;
+    if (animPlaying) {
+      playBtn.innerHTML='<span class="material-symbols-outlined">pause</span>';
+      animIdx=0;
+      (function step() {
+        drawFrame(animIdx);
+        animIdx+=Math.max(1,Math.floor(path.length/100));
+        if (animIdx<path.length) animHandle=requestAnimationFrame(step);
+        else { animPlaying=false; playBtn.innerHTML='<span class="material-symbols-outlined" style="font-variation-settings: \'FILL\' 1;">play_arrow</span>'; }
+      })();
+    }
+  };
+  document.getElementById('animReset').onclick=()=>{ cancelAnimation(); drawFrame(path.length-1); };
+}
+
+/* ════════════════════════════════════════
+   CHART HELPERS
+   ════════════════════════════════════════ */
+const chartInstances = {};
+const CHART_DEFAULTS = {
+  responsive: true, maintainAspectRatio: false,
+  animation: { duration: 600, easing: 'easeOutQuart' },
+  plugins: { legend: { display: false }, tooltip: {
+    backgroundColor: 'rgba(15,23,42,0.95)', titleColor: '#94a3b8',
+    bodyColor: '#f1f1ec', borderColor: 'rgba(255,255,255,0.08)', borderWidth: 1,
+    padding: 10, titleFont: { family: 'Plus Jakarta Sans', size: 11, weight: 700 },
+    bodyFont: { family: 'Google Sans Mono', size: 12 },
+  }},
+  scales: {
+    x: { ticks: { color: '#475569', font: { size: 10, family: 'Inter' } }, grid: { color: 'rgba(255,255,255,0.04)' }, border: { color: 'rgba(255,255,255,0.05)' } },
+    y: { ticks: { color: '#475569', font: { size: 10, family: 'Inter' } }, grid: { color: 'rgba(255,255,255,0.04)' }, border: { color: 'rgba(255,255,255,0.05)' } }
+  }
+};
+
+function mkChart(id, cfg) {
+  if (chartInstances[id]) chartInstances[id].destroy();
+  const canvas=document.getElementById(id);
+  if (!canvas) return;
+  chartInstances[id]=new Chart(canvas, cfg);
+  return chartInstances[id];
+}
+
+function makeLineDataset(label, data, color) {
+  return { label, data, borderColor: color, backgroundColor: color+'22', fill: true,
+           borderWidth: 2, pointRadius: 0, tension: 0.2 };
+}
+
+function renderConvCharts(r) {
+  const color = METHODS[r.method].color;
+  const labels = r.fvals.map((_,i)=>i);
+
+  mkChart('chartFval', { type:'line', data: { labels, datasets: [makeLineDataset('f(x_k)', r.fvals.map(v=>Math.max(v,1e-16)), color)] },
+    options: { ...CHART_DEFAULTS, scales: { ...CHART_DEFAULTS.scales, y: { ...CHART_DEFAULTS.scales.y, type:'logarithmic', ticks:{color:'#475569', font:{size:10}} } } } });
+
+  mkChart('chartGrad', { type:'line', data: { labels: r.gradNorms.map((_,i)=>i), datasets: [makeLineDataset('‖∇f‖', r.gradNorms.map(v=>Math.max(v,1e-16)), '#632ce5')] },
+    options: { ...CHART_DEFAULTS, scales: { ...CHART_DEFAULTS.scales, y: { ...CHART_DEFAULTS.scales.y, type:'logarithmic', ticks:{color:'#475569', font:{size:10}} } } } });
+
+  mkChart('chartAlpha', { type:'line', data: { labels: r.alphas.map((_,i)=>i), datasets: [makeLineDataset('α_k', r.alphas, '#00bfa5')] },
+    options: CHART_DEFAULTS });
+
+  const xVals=r.path.map(p=>p.x.toFixed(4)), yVals=r.path.map(p=>p.y.toFixed(4));
+  mkChart('chartXY', { type:'line', data: { labels: r.path.map((_,i)=>i), datasets: [
+    makeLineDataset('x', xVals, '#4285F4'), makeLineDataset('y', yVals, '#fbbc04')
+  ]}, options: { ...CHART_DEFAULTS, plugins: { ...CHART_DEFAULTS.plugins, legend: { display:true, labels: { color:'#94a3b8', font:{size:11,family:'Inter'} } } } } });
+}
+
+function renderCmpTable(res) {
+  const tbody = document.getElementById('cmpTableBody');
+  tbody.innerHTML = '';
+  Object.entries(res).forEach(([m, r]) => {
+    if (!r.iters && !r.converged) return;
+    const color = METHODS[m]?.color || '#888';
+    const conv = r.converged;
+    const row = document.createElement('tr');
+    row.innerHTML = `
+      <td><span class="inline-flex items-center gap-2 font-mono text-xs font-bold">
+        <span class="w-2.5 h-2.5 rounded-full" style="background:${color}"></span>${METHODS[m]?.name||m}
+      </span></td>
+      <td><span class="px-2 py-0.5 rounded-full text-[11px] font-bold ${conv?'bg-green-900/40 text-green-400':'bg-orange-900/40 text-orange-400'}">${conv?'✓ Converged':'⚠ Max Iters'}</span></td>
+      <td class="font-mono text-zinc-300">${r.iters.toLocaleString()}</td>
+      <td class="font-mono text-zinc-300">${Math.abs(r.fx)<1e-4?r.fx.toExponential(3):r.fx.toPrecision(4)}</td>
+      <td class="font-mono ${r.gnormFinal<1e-4?'text-green-400':r.gnormFinal<1e-2?'text-orange-400':'text-red-400'}">${r.gnormFinal.toExponential(2)}</td>
+      <td class="font-mono text-zinc-300">${r.time.toFixed(2)}</td>
+    `;
+    tbody.appendChild(row);
+  });
+
+  document.getElementById('cmpTableWrap').classList.remove('hidden');
+  document.getElementById('cmpMasterChart').classList.remove('hidden');
+
+  // Comparative chart
+  const maxLen = Math.max(...Object.values(res).map(r=>r.gradNorms?.length||0));
+  const labels = Array.from({length:maxLen},(_,i)=>i);
+  const datasets = Object.entries(res).map(([m,r]) => ({
+    label: METHODS[m]?.short||m,
+    data: (r.gradNorms||[]).map(v=>Math.max(v,1e-16)),
+    borderColor: METHODS[m]?.color||'#888',
+    borderWidth: 2, pointRadius: 0, tension: 0.2, fill: false
+  }));
+  mkChart('chartCmp', { type:'line', data:{labels,datasets},
+    options: { ...CHART_DEFAULTS,
+      plugins: { ...CHART_DEFAULTS.plugins, legend: { display:true, labels:{color:'#94a3b8',font:{size:11,family:'Inter'}} } },
+      scales: { ...CHART_DEFAULTS.scales, y: { ...CHART_DEFAULTS.scales.y, type:'logarithmic', ticks:{color:'#475569'} } }
+    }
+  });
+
+  // Summary cards
+  const wrap = document.getElementById('cmpCardsWrap');
+  wrap.innerHTML = '';
+  const sorted = Object.entries(res).sort((a,b)=>(a[1].iters||99999)-(b[1].iters||99999));
+  sorted.forEach(([m,r], idx) => {
+    const color = METHODS[m]?.color||'#888';
+    const card = document.createElement('div');
+    card.className = 'glass-card rounded-lg p-5 relative overflow-hidden';
+    if (idx===0) card.innerHTML += `<div class="absolute top-3 right-3 text-[10px] font-bold text-yellow-400 font-headline bg-yellow-400/10 px-2 py-0.5 rounded-full">Fastest</div>`;
+    card.innerHTML += `
+      <div class="flex items-center gap-2 mb-3">
+        <span class="w-3 h-3 rounded-full" style="background:${color}"></span>
+        <span class="font-headline font-bold text-white text-sm">${METHODS[m]?.name||m}</span>
+      </div>
+      <div class="text-3xl font-black font-mono text-white mb-1">${r.iters||'—'}</div>
+      <div class="text-[11px] text-zinc-500">iterations</div>
+      <div class="mt-3 text-xs font-mono ${r.converged?'text-green-400':'text-orange-400'}">${r.converged?'Converged':'Max iters'}</div>
+    `;
+    wrap.appendChild(card);
+  });
+}
+
+/* ════════════════════════════════════════
+   UI STATE & WIRING
+   ════════════════════════════════════════ */
+let curFn='rosenbrock', curMethod='A', lastResult=null, cmpResults=null;
+
+// Build function pills (config panel + quick bar)
+[document.getElementById('fnGrid'), document.getElementById('quickFnGrid')].forEach(container => {
+  if (!container) return;
+  Object.entries(FN).forEach(([k,v]) => {
+    const b=document.createElement('button');
+    const isQuick = container.id==='quickFnGrid';
+    b.className=`px-3 py-1.5 rounded-full text-xs font-semibold transition-premium border ${k===curFn?'bg-white/15 text-white border-white/20':'bg-white/5 text-zinc-400 border-white/5 hover:bg-white/10 hover:text-white'}`;
+    b.dataset.fn=k; b.textContent=v.name;
+    b.addEventListener('click',()=>selectFn(k));
+    container.appendChild(b);
+  });
+});
+
+// Build method list (config panel)
+const methodList=document.getElementById('methodList');
+const miniMethodList=document.getElementById('miniMethodList');
+Object.entries(METHODS).forEach(([k,v]) => {
+  // Config drawer list
+  const div=document.createElement('div');
+  div.className=`flex items-center justify-between p-2.5 rounded-xl transition-premium cursor-pointer ${k===curMethod?'bg-white/10':'hover:bg-white/5'}`;
+  div.dataset.method=k;
+  div.innerHTML=`<div class="flex items-center gap-2.5"><div class="w-2.5 h-2.5 rounded-full" style="background:${v.color}"></div><span class="text-sm text-zinc-200 font-medium">${v.name}</span></div><span class="material-symbols-outlined text-sm ${k===curMethod?'text-primary':'text-transparent'}" style="font-variation-settings:'FILL' 1;">check_circle</span>`;
+  div.addEventListener('click',()=>selectMethod(k));
+  methodList.appendChild(div);
+
+  // Mini method list in sidebar card
+  const mini=document.createElement('button');
+  mini.className=`w-full flex items-center gap-2 py-1.5 px-2 rounded-xl text-xs font-semibold transition-premium ${k===curMethod?'bg-white/10 text-white':'text-zinc-500 hover:text-zinc-300 hover:bg-white/5'}`;
+  mini.dataset.method=k;
+  mini.innerHTML=`<span class="w-2 h-2 rounded-full flex-shrink-0" style="background:${v.color}"></span>${v.name}`;
+  mini.addEventListener('click',()=>selectMethod(k));
+  miniMethodList.appendChild(mini);
+});
+
+document.getElementById('fnFormula').textContent = FN[curFn].formula;
+updateMethodAccent(curMethod);
+
+function selectFn(k) {
+  curFn=k;
+  // Update all fn buttons
+  [document.getElementById('fnGrid'), document.getElementById('quickFnGrid')].forEach(c=>{
+    if (!c) return;
+    Array.from(c.children).forEach(b=>{
+      const act=b.dataset.fn===k;
+      b.className=`px-3 py-1.5 rounded-full text-xs font-semibold transition-premium border ${act?'bg-white/15 text-white border-white/20':'bg-white/5 text-zinc-400 border-white/5 hover:bg-white/10 hover:text-white'}`;
+    });
+  });
+  document.getElementById('x0').value=FN[k].x0[0];
+  document.getElementById('y0').value=FN[k].x0[1];
+  document.getElementById('fnFormula').textContent=FN[k].formula;
+  document.getElementById('activeFnLabel').textContent=FN[k].name;
+}
+
+function selectMethod(k) {
+  curMethod=k;
+  // Update config drawer list
+  Array.from(methodList.children).forEach(div=>{
+    const act=div.dataset.method===k;
+    div.className=`flex items-center justify-between p-2.5 rounded-xl transition-premium cursor-pointer ${act?'bg-white/10':'hover:bg-white/5'}`;
+    div.querySelector('.material-symbols-outlined').className=`material-symbols-outlined text-sm ${act?'text-primary':'text-transparent'}`;
+  });
+  // Update mini list
+  Array.from(miniMethodList.children).forEach(b=>{
+    const act=b.dataset.method===k;
+    b.className=`w-full flex items-center gap-2 py-1.5 px-2 rounded-xl text-xs font-semibold transition-premium ${act?'bg-white/10 text-white':'text-zinc-500 hover:text-zinc-300 hover:bg-white/5'}`;
+  });
+  updateMethodAccent(k);
+}
+
+function updateMethodAccent(k) {
+  const m=METHODS[k];
+  document.getElementById('quickMethodDot').style.background=m.color;
+  document.getElementById('quickMethodName').textContent=m.name;
+  document.getElementById('methodFullName').textContent=m.name;
+  document.getElementById('methodDesc').textContent=m.desc;
+  document.getElementById('mBadge').textContent=k;
+}
+
+function setStatus(state, msg) {
+  document.getElementById('statusText').textContent=msg;
+  const dot=document.getElementById('statusDot');
+  if (state==='running') dot.className='w-2 h-2 rounded-full bg-blue-500 animate-pulse';
+  else if (state==='error') dot.className='w-2 h-2 rounded-full bg-red-500';
+  else dot.className='w-2 h-2 rounded-full bg-green-500';
+}
+
+function executeRun() {
+  const x0=parseFloat(document.getElementById('x0').value);
+  const y0=parseFloat(document.getElementById('y0').value);
+  const maxIter=parseInt(document.getElementById('maxIter').value)||5000;
+  const tol=parseFloat(document.getElementById('tol').value)||1e-6;
+
+  setStatus('running','Simulating…');
+  cancelAnimation();
+  setTimeout(()=>{
+    const r=runOptimize(curFn,curMethod,x0,y0,maxIter,tol);
+    lastResult={...r,method:curMethod,fnKey:curFn};
+
+    // Update stats
+    document.getElementById('sIter').textContent=r.iters.toLocaleString();
+    document.getElementById('sFval').textContent=Math.abs(r.fx)<1e-4?r.fx.toExponential(3):r.fx.toPrecision(4);
+    document.getElementById('sFval').className=`text-xl font-bold font-mono ${Math.abs(r.fx)<1e-3?'text-green-400':'text-white'}`;
+    document.getElementById('sGrad').textContent=r.gnormFinal.toExponential(2);
+    document.getElementById('sGrad').className=`text-xl font-bold font-mono ${r.gnormFinal<1e-4?'text-green-400':r.gnormFinal<1e-2?'text-yellow-400':'text-red-400'}`;
+    document.getElementById('sStatus').textContent=r.converged?'Converged':'Max Iters';
+    document.getElementById('sStatus').className=`text-2xl font-black font-headline ${r.converged?'text-green-400':'text-orange-400'}`;
+    document.getElementById('convIcon').textContent=r.converged?'done_all':'warning';
+    document.getElementById('convIcon').style.color=r.converged?'#4ade80':'#fb923c';
+    document.getElementById('sTime').textContent=r.time.toFixed(1)+' ms execution time';
+    document.getElementById('activeFnLabel').textContent=FN[curFn].name;
+
+    drawPlot(r.path, curMethod);
+    switchTab('viz');
+    setStatus('ready','Complete');
+  },50);
+}
+
+function executeBenchmark() {
+  const x0=parseFloat(document.getElementById('x0').value);
+  const y0=parseFloat(document.getElementById('y0').value);
+  const maxIter=parseInt(document.getElementById('maxIter').value)||5000;
+  const tol=parseFloat(document.getElementById('tol').value)||1e-6;
+
+  setStatus('running','Benchmarking…');
+  setTimeout(()=>{
+    const res={};
+    Object.keys(METHODS).forEach(m=>{ res[m]=runOptimize(curFn,m,x0,y0,maxIter,tol); });
+    cmpResults=res;
+    renderCmpTable(res);
+    switchTab('compare');
+    setStatus('ready','Benchmark Done');
+  },50);
+}
+
+document.getElementById('runBtn').addEventListener('click', executeRun);
+document.getElementById('quickRunBtn').addEventListener('click', executeRun);
+document.getElementById('cmpBtn').addEventListener('click', executeBenchmark);
+
+// Tab navigation
+function switchTab(name) {
+  const tabMap = { viz:'panelViz', convergence:'panelConv', compare:'panelCmp' };
+  document.querySelectorAll('.panel').forEach(p=>p.classList.remove('active'));
+  document.getElementById(tabMap[name])?.classList.add('active');
+
+  document.querySelectorAll('.tab-btn').forEach(b=>{
+    const act=b.dataset.tab===name;
+    b.className=`tab-btn px-4 py-1.5 rounded-full text-sm font-semibold font-headline transition-colors ${act?'text-white bg-white/10':'text-zinc-400 hover:text-white'}`;
+  });
+
+  if (name==='convergence' && lastResult) renderConvCharts(lastResult);
+  if (name==='compare' && cmpResults) renderCmpTable(cmpResults);
+}
+
+document.querySelectorAll('.tab-btn').forEach(b=>{
+  b.addEventListener('click',()=>switchTab(b.dataset.tab));
+});
+
+// Initial state
+selectFn('rosenbrock');
+selectMethod('A');
+</script>
+</body>
+</html>
