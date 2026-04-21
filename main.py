@@ -10,7 +10,7 @@ Endpoints:
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
-from typing import Optional, List, Dict, Any
+from typing import List, Dict, Any
 import numpy as np
 
 from optimizer import optimize, FUNCTIONS, _numerical_gradient
@@ -34,7 +34,7 @@ app.add_middleware(
 # ─────────────────────────────────────────────
 
 class OptimizeRequest(BaseModel):
-    func_name: str = Field("rosenbrock", description="Function key or 'custom'")
+    func_name: str = Field("rosenbrock", description="Function key")
     method: str    = Field("A", description="C|A|B|BB1|BB2|EL")
     x0: List[float] = Field([-1.2, 1.0])
     max_iter: int  = Field(5000, ge=1, le=20000)
@@ -50,8 +50,7 @@ class OptimizeRequest(BaseModel):
     bb_alpha0: float = 0.01
     # EL
     el_alpha0: float = 0.1
-    # custom
-    custom_expr: Optional[str] = None
+
 
 
 class CompareRequest(BaseModel):
@@ -60,7 +59,6 @@ class CompareRequest(BaseModel):
     x0: List[float]   = [-1.2, 1.0]
     max_iter: int      = 5000
     tol: float         = 1e-6
-    custom_expr: Optional[str] = None
 
 
 class ContourRequest(BaseModel):
@@ -68,7 +66,6 @@ class ContourRequest(BaseModel):
     xlim: List[float] = [-2.0, 2.0]
     ylim: List[float] = [-1.0, 3.0]
     resolution: int   = Field(80, ge=20, le=300)
-    custom_expr: Optional[str] = None
 
 
 # ─────────────────────────────────────────────
@@ -114,7 +111,6 @@ def run_optimize(req: OptimizeRequest):
             bt_sigma    = req.bt_sigma,
             bb_alpha0   = req.bb_alpha0,
             el_alpha0   = req.el_alpha0,
-            custom_expr = req.custom_expr,
         )
         return {
             "success":     result.success,
@@ -145,7 +141,6 @@ def run_compare(req: CompareRequest):
                 x0          = req.x0,
                 max_iter    = req.max_iter,
                 tol         = req.tol,
-                custom_expr = req.custom_expr,
             )
             results[m] = {
                 "success":    r.success,
@@ -167,17 +162,10 @@ def run_compare(req: CompareRequest):
 @app.post("/contour")
 def get_contour(req: ContourRequest):
     """Compute contour grid for plotting."""
-    if req.func_name == "custom" and req.custom_expr:
-        import sympy as sp
-        x1s, x2s = sp.symbols('x y')
-        expr = sp.sympify(req.custom_expr)
-        f_sym = sp.lambdify((x1s, x2s), expr, modules='numpy')
-        f = lambda v: f_sym(v[0], v[1])
-    else:
-        info = FUNCTIONS.get(req.func_name)
-        if info is None:
-            raise HTTPException(status_code=404, detail="Unknown function")
-        f = info["f"]
+    info = FUNCTIONS.get(req.func_name)
+    if info is None:
+        raise HTTPException(status_code=404, detail="Unknown function")
+    f = info["f"]
 
     x_arr = np.linspace(req.xlim[0], req.xlim[1], req.resolution)
     y_arr = np.linspace(req.ylim[0], req.ylim[1], req.resolution)

@@ -6,7 +6,7 @@ IOP Conf. Ser.: Mater. Sci. Eng. 332 012024
 
 import numpy as np
 from dataclasses import dataclass, field
-from typing import Optional, List, Tuple
+from typing import List, Tuple
 import math
 
 
@@ -117,7 +117,7 @@ def rastrigin_hess(x):
 
 
 # ─────────────────────────────────────────────
-#  Numerical gradient / Hessian (for custom f)
+#  Numerical gradient / Hessian
 # ─────────────────────────────────────────────
 
 def _numerical_gradient(f, x, eps=1e-7):
@@ -348,36 +348,21 @@ def optimize(
     bb_alpha0: float = 0.01,
     # EL initial step
     el_alpha0: float = 0.1,
-    # Custom function expression
-    custom_expr: Optional[str] = None,
 ) -> OptimizationResult:
     import time
 
     # ── resolve function ──────────────────────
-    if func_name == "custom" and custom_expr:
-        import sympy as sp
-        x1, x2 = sp.symbols('x y')
-        expr = sp.sympify(custom_expr)
-        f_sym = sp.lambdify((x1, x2), expr, modules='numpy')
-        f  = lambda v: float(f_sym(v[0], v[1]))
-        grad_sym_x = sp.diff(expr, x1)
-        grad_sym_y = sp.diff(expr, x2)
-        gx = sp.lambdify((x1, x2), grad_sym_x, modules='numpy')
-        gy = sp.lambdify((x1, x2), grad_sym_y, modules='numpy')
-        grad_fn = lambda v: np.array([float(gx(v[0], v[1])), float(gy(v[0], v[1]))])
-        hess_fn = lambda v: _numerical_hessian(f, v)
-    else:
-        info = FUNCTIONS.get(func_name)
-        if info is None:
-            return OptimizationResult(
-                success=False, x_opt=x0, f_opt=float('nan'),
-                iterations=0, path=[], f_values=[], grad_norms=[],
-                step_sizes=[], time_ms=0, message="Unknown function",
-                method=method
-            )
-        f        = info["f"]
-        grad_fn  = info["grad"]
-        hess_fn  = info["hess"]
+    info = FUNCTIONS.get(func_name)
+    if info is None:
+        return OptimizationResult(
+            success=False, x_opt=x0, f_opt=float('nan'),
+            iterations=0, path=[], f_values=[], grad_norms=[],
+            step_sizes=[], time_ms=0, message="Unknown function",
+            method=method
+        )
+    f        = info["f"]
+    grad_fn  = info["grad"]
+    hess_fn  = info["hess"]
 
     x = np.array(x0, dtype=float)
     path        = [x.tolist()]
